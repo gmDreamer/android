@@ -1,0 +1,14 @@
+package com.example.a;
+
+import android.content.Context;
+import android.graphics.Paint;
+import android.view.View;
+
+public class ImageMask extends View {
+
+	public ImageMask(Context context) {
+		super(context);
+		Paint paint = new Paint();
+	}
+  
+}

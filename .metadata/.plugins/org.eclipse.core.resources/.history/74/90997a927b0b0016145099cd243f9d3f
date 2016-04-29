@@ -1,0 +1,27 @@
+package com.example.a;
+
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.AttributeSet;
+import android.view.View;
+
+public class ImageMask extends View {
+    int mImageSource = 0;
+    int mMaskSource = 0;
+	 public ImageMask(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.MaskImage, 0, 0);
+	    mImageSource = a.getResourceId(R.styleable.MaskImage_image, 0);
+	    mMaskSource  = a.getResourceId(R.styleable.MaskImage_mask, 0);
+	    if(mImageSource ==0 || mMaskSource ==0){
+	    	System.out.println("不是一个有效图片");
+	    }
+	    Bitmap  bitmap = BitmapFactory.decodeResource(getResources(), mImageSource);
+	    Bitmap  maskmap = BitmapFactory.decodeResource(getResources(), mMaskSource);
+	    
+	}
+
+	
+}

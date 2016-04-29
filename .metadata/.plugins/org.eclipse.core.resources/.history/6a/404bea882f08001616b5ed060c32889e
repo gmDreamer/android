@@ -1,0 +1,909 @@
+package cn.oa.android.app.ui.user;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
+
+import org.json.JSONObject;
+
+import com.google.gson.reflect.TypeToken;
+
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.os.Handler;
+import android.os.Message;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.util.Base64;
+import android.util.TypedValue;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnFocusChangeListener;
+import android.view.View.OnLongClickListener;
+import android.view.ViewGroup;
+import android.view.WindowManager.LayoutParams;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AutoCompleteTextView;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.PopupWindow;
+import android.widget.PopupWindow.OnDismissListener;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import cn.oa.android.api.model.AccountModel;
+import cn.oa.android.app.AppSettings;
+import cn.oa.android.app.AppSettings.ClientVer;
+import cn.oa.android.app.base.BaseActivity;
+import cn.oa.android.app.component.util.JSONUtils;
+import cn.oa.android.app.util.ComLoginTask;
+import cn.oa.android.app.util.UIHelper;
+import cn.oa.android.app.v3.R;
+import cn.oa.android.lib.api.HttpCallBack;
+import cn.oa.android.lib.util.ViewUtil;
+import cn.oa.android.support.app.AppClient;
+import cn.oa.android.support.app.AppContextBase;
+import cn.oa.android.support.app.AppData.RetType;
+import cn.oa.android.support.app.api.types.UserInfo;
+import cn.oa.android.support.app.dao.AccountInfo;
+import cn.oa.android.support.app.dao.ModuleInfo;
+import cn.oa.android.support.app.dialog.OaAlertDialog;
+import cn.oa.android.support.app.event.FinishActivityEvent;
+import cn.oa.android.support.app.model.ModuleModel;
+import cn.oa.android.support.app.util.PhoneTools;
+import cn.oa.android.support.app.util.StringUtil;
+import cn.oa.android.support.app.view.OaResizeLayout;
+import cn.oa.android.support.app.view.OaResizeLayout.OnResizeListener;
+
+/**
+ * 登陆页面
+ * 
+ * @author james.ou 2015-2
+ * 
+ */
+public class LoginActivity extends BaseActivity {
+
+	private static final String TAG = LoginActivity.class.getSimpleName();
+	// 验证问题请求代码
+	private static final int REQUEST_VERIRY_QUESTION = 101;
+	// 设置用户名称及密码请求代码
+	private static final int REQUEST_SET_NAME_PWD = 100;
+	// 邀请加入
+	private static final int REQUEST_INVITE = 0;
+
+	private RelativeLayout layLoginArea;
+	
+	private OaResizeLayout parent;
+	// 顶部Lay
+	private RelativeLayout layHead;
+	// 顶部logo
+	private ImageView ivHeadView;
+	// 忘记密码面板
+	private TextView tvForgetPassword;
+	private View mforgetpwdView;
+	// 登陆框
+	private AutoCompleteTextView tvLoginName;
+	private ImageView ivClearLoginName;
+	private CheckBox cbLoginNameMore;
+	private EditText tvPassword;
+	private ImageView ivClearPassword;
+
+	private Button btnLogin;
+	private CheckBox cbRemember;
+	private CheckBox cbAutoLogin;
+	private TextView tvRememberTips;
+	private TextView tvAutoLoginTips;
+	private TextView tvAppName;
+
+	private String mAccount;
+	private String mPassword;
+
+	private String extra;
+	private int id;
+	private int userNo;
+	private int enterpriseNo;
+	private String msgnote = "";
+	private String comefrom = "";
+
+	private PopupWindow popupWindow;
+	private ListView listView;
+	private List<String> accounts;
+	private MyAdapter adapter;
+	private AccountModel accountService;
+	private List<AccountInfo> allAccounts;
+
+	private boolean choiceEnterprise = true; // 选择企业登陆
+	private boolean clearUsernameEditText = false; // 是否清空文本框里面的账号信息
+	private boolean autoClearPassWord = false;//是否编辑帐号就清除密码
+	
+	private UserInfo user;
+
+	private Handler handler = new Handler() {
+		public void handleMessage(android.os.Message msg) {
+			if (msg.what == 1) {
+				if (msg.arg1 == 1) {
+					layHead.setVisibility(View.VISIBLE);
+					// ivHeadView.setVisibility(View.VISIBLE);
+				} else {
+					layHead.setVisibility(View.GONE);
+					// ivHeadView.setVisibility(View.GONE);
+				}
+			}
+		};
+	};
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		getDecorChild().setVisibility(View.VISIBLE);
+		getGesturelock().setVisibility(View.GONE);
+		// 统计
+		MobileProbe.onResume(this);
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+		// 统计
+		MobileProbe.onPause(this);
+	}
+
+	// ============================
+	@Override
+	public void onSetContentView() {
+		setContentView(R.layout.activity_login);
+	}
+
+	@Override
+	public void onPreLoad() {
+        accountService = AccountModel.getInstance();
+		comefrom = getIntent().getStringExtra("comefrom");
+		if (comefrom == null) {
+			comefrom = "";
+		}
+
+		extra = getIntent().getStringExtra("goto");
+		id = getIntent().getIntExtra("id", 0);
+		userNo = getIntent().getIntExtra("usno", 0);
+		enterpriseNo = getIntent().getIntExtra("enno", 0);
+		msgnote = getIntent().getStringExtra("note");
+
+        allAccounts = accountService.getAllAccount();
+		accounts = new ArrayList<String>();
+	}
+
+	@Override
+	public void onFindViews() {
+
+		tvAppName = (TextView) findViewById(R.id.tvAppName);
+		tvAppName.setText(ClientVer.getClientName(this));
+		
+		layLoginArea = (RelativeLayout) findViewById(R.id.layLoginArea);
+		parent = (OaResizeLayout) findViewById(R.id.parent);
+		mforgetpwdView = mInflater.inflate(R.layout.login_findpwd_pop, null);
+
+		// 顶部lay
+		layHead = (RelativeLayout) findViewById(R.id.layHead);
+		// 顶部logo
+		ivHeadView = (ImageView) findViewById(R.id.ivHeadView);
+		ivHeadView.setBackgroundResource(ClientVer.getLoginIcon(this));
+		
+		// 忘记密码面板
+		tvForgetPassword = (TextView) findViewById(R.id.tvForgetPassword);
+		// 登陆框
+		tvLoginName = (AutoCompleteTextView) findViewById(R.id.tvLoginName);
+		ivClearLoginName = (ImageView) findViewById(R.id.ivClearLoginName);
+		cbLoginNameMore = (CheckBox) findViewById(R.id.cbLoginNameMore);
+		tvPassword = (EditText) findViewById(R.id.tvPassword);
+		ivClearPassword = (ImageView) findViewById(R.id.ivClearPassword);
+
+		btnLogin = (Button) findViewById(R.id.btnLogin);
+		cbRemember = (CheckBox) findViewById(R.id.cbRemember);
+		cbAutoLogin = (CheckBox) findViewById(R.id.cbAutoLogin);
+		tvRememberTips = (TextView) findViewById(R.id.tvRememberTips);
+		tvAutoLoginTips = (TextView) findViewById(R.id.tvAutoLoginTips);
+	}
+
+	@Override
+	public void onSetListensers() {
+		Log.i(TAG + "#%s", "onSetListensers()");
+
+		btnLogin.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+		
+				if (TextUtils.isEmpty(tvLoginName.getText())) {
+					showToast(R.string.login_account_empty);
+					ViewUtil.editActive(tvLoginName);
+					return;
+				} else if (TextUtils.isEmpty(tvPassword.getText())) {
+					showToast(R.string.login_password_empty);
+					ViewUtil.editActive(tvLoginName);
+					return;
+				}
+
+				hideInput();
+				if (PhoneTools.isNetAvailable(LoginActivity.this)) {
+					doLoginTask();
+				} else {
+					// 没有网络显示对话框
+					showDialog(getString(R.string.prompt),
+							getString(R.string.nonetwork),
+							new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface arg0,
+										int arg1) {
+									UIHelper.pushNetworkSettingActivity(LoginActivity.this);
+								}
+							});
+				}
+			}
+		});
+
+		parent.setOnResizeListener(new OnResizeListener() {
+			@Override
+			public void OnResize(int w, int h, int oldw, int oldh) {
+				int change = 1;
+				if (h < oldh) {// 软键盘弹出，GONE
+					change = 2;
+				}
+
+				Message msg = new Message();
+				msg.what = 1;
+				msg.arg1 = change;
+				handler.sendMessage(msg);
+			}
+		});
+		parent.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				hideInput();
+			}
+		});
+		// 显示更多的账号
+		cbLoginNameMore.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+					@Override
+					public void onCheckedChanged(CompoundButton buttonView,
+							boolean isChecked) {
+
+						if (isChecked && !popupWindow.isShowing() && allAccounts.size() > 0) {
+							ivClearLoginName.setVisibility(View.GONE);
+							hideInput();
+							cbLoginNameMore.postDelayed(new Runnable() {
+								public void run() {
+									popupWindow.showAsDropDown(tvLoginName, 0, -5);
+								}
+							}, 200);
+						} else {
+							popupWindow.dismiss();
+						}
+					}
+				});
+		// 清除用户名
+		ivClearLoginName.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				tvLoginName.setText("");
+				tvPassword.setText("");
+				autoClearPassWord = false;
+				cbAutoLogin.setChecked(false);
+				cbRemember.setChecked(false);
+			}
+		});
+		// 清除密码
+		ivClearPassword.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				tvPassword.setText("");
+				ViewUtil.editActive(tvPassword);
+			}
+		});
+
+		tvLoginName.setFocusableInTouchMode(true);
+		tvLoginName.setOnFocusChangeListener(new OnFocusChangeListener() {
+			@Override
+			public void onFocusChange(View v, boolean hasFocus) {
+				if (hasFocus && tvLoginName.getText().length() > 0) {
+					ivClearLoginName.setVisibility(View.VISIBLE);
+				} else {
+					ivClearLoginName.setVisibility(View.GONE);
+				}
+			}
+		});
+		tvLoginName.setOnLongClickListener(new OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View v) {
+				tvLoginName.setText("");
+				return false;
+			}
+		});
+
+		tvLoginName.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+		// tvLoginName.setThreshold(1);// 1个字符就弹出提示
+		if (tvLoginName.length() > 0 && tvLoginName.isFocused()) {
+			ivClearLoginName.setVisibility(View.VISIBLE);
+		}
+
+		tvPassword.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+		tvPassword.setOnFocusChangeListener(new OnFocusChangeListener() {
+			@Override
+			public void onFocusChange(View v, boolean hasFocus) {
+				if (hasFocus && tvPassword.getText().length() > 0) {
+					ivClearPassword.setVisibility(View.VISIBLE);
+				} else {
+					ivClearPassword.setVisibility(View.GONE);
+				}
+			}
+		});
+		tvPassword.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before,
+					int count) {
+				if (s.length() > 0 && tvPassword.hasFocus()) {
+					ivClearPassword.setVisibility(View.VISIBLE);
+				} else {
+					ivClearPassword.setVisibility(View.GONE);
+				}
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count,
+					int after) {
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+
+			}
+		});
+
+        tvLoginName.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                Log.i("chx", "onTextChanged");
+                if (s.length() > 0) {
+                    ivClearLoginName.setVisibility(View.VISIBLE);
+                } else {
+                    ivClearLoginName.setVisibility(View.GONE);
+                }
+                if(autoClearPassWord){
+                	tvPassword.setText("");
+                	autoClearPassWord = false;
+                }
+            }
+            
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                Log.i("chx", "beforeTextChanged");
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {
+                Log.i("chx", "afterTextChanged");
+                cbAutoLogin.setChecked(false);
+                cbRemember.setChecked(false);
+            }
+        });
+
+		cbAutoLogin.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView,
+					boolean isChecked) {
+				if (isChecked) {
+					cbRemember.setChecked(true);
+				}
+			}
+		});
+		
+		cbRemember.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				// TODO Auto-generated method stub
+				if (!isChecked) {
+					cbAutoLogin.setChecked(false);
+				}
+			}
+		});
+
+		tvRememberTips.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				if(!cbRemember.isChecked()){
+					cbAutoLogin.setChecked(false);
+				}
+				cbRemember.setChecked(!cbRemember.isChecked());
+			}
+		});
+		
+		tvAutoLoginTips.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				if(cbAutoLogin.isChecked()){
+					cbRemember.setChecked(true);
+				}
+				cbAutoLogin.setChecked(!cbAutoLogin.isChecked());
+			}
+		});
+		
+		tvForgetPassword.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// showSheetActionDialog(mforgetpwdView);
+				UIHelper.pushMobileVerificationActivity(LoginActivity.this);
+			}
+		});
+
+		// 找回密码
+		Button byPhoneBtn = (Button) mforgetpwdView.findViewById(R.id.phoneFindBtn);
+		Button byEmailBtn = (Button) mforgetpwdView.findViewById(R.id.emailFindBtn);
+		Button cancelBtn = (Button) mforgetpwdView.findViewById(R.id.cancelBtn);
+		byPhoneBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				UIHelper.pushFindPwdActivity(LoginActivity.this, true);
+			}
+		});
+		byEmailBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				UIHelper.pushFindPwdActivity(LoginActivity.this, false);
+			}
+		});
+		cancelBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				removeActionSheetDialog();
+			}
+		});
+	}
+
+	@Override
+	public void onPostLoad() {
+//		UIHelper.setViewBackgroud(UIHelper.PAGE_LOGIN, ivHeadView, this);
+		btnLogin.setTextColor(Color.WHITE);
+		handler.postDelayed(new Runnable() {
+			
+			@Override
+			public void run() {
+				initAccoutPoplist();
+			}
+		}, 300);
+	}
+
+	/**
+	 * 初始化下拉账号选择
+	 */
+	private void initAccoutPoplist() {
+		LayoutInflater inflater = LayoutInflater.from(this);
+		View view = inflater.inflate(R.layout.login_counts_pop, null);
+		listView = (ListView) view.findViewById(R.id.listview);
+
+		popupWindow = new PopupWindow(view, layLoginArea.getWidth(),LayoutParams.WRAP_CONTENT, true);
+		popupWindow.setOutsideTouchable(true);
+		popupWindow.setAnimationStyle(android.R.style.Animation_Dialog);
+//		popupWindow.update();
+		popupWindow.setTouchable(true);
+		popupWindow.setFocusable(true);
+        popupWindow.setBackgroundDrawable(new BitmapDrawable());
+
+		popupWindow.setOnDismissListener(new OnDismissListener() {
+			@Override
+			public void onDismiss() {
+				cbLoginNameMore.setChecked(false);
+				if (tvLoginName.length() > 0 && tvLoginName.isFocused()) {
+					ivClearLoginName.setVisibility(View.VISIBLE);
+				}
+			}
+		});
+
+		AccountInfo info = null;
+		if (allAccounts.size() > 0) {
+            info = getLastestActiveAccount(allAccounts);
+
+			for (AccountInfo account : allAccounts) {
+				accounts.add(account.getAccount());
+			}
+
+			adapter = new MyAdapter(this, accounts);
+			listView.setAdapter(adapter);
+			listView.setOnItemClickListener(new OnItemClickListener() {
+				@Override
+				public void onItemClick(AdapterView<?> parent, View view,
+						int position, long id) {
+                    try {
+                        tvLoginName.setText(accounts.get(position));
+                        for (int index = 0; index < accounts.size(); index++) {
+                            if (accounts.get(index).equals(tvLoginName.getText().toString())) {
+                                AccountInfo item = allAccounts.get(index);
+                                if (item.getRemember_pwd() == 1) {
+                                    tvPassword.setText(item.getPassword());
+                                }
+                                cbRemember.setChecked(item.getRemember_pwd() == 1);
+                                cbAutoLogin.setChecked(item.getAutologin() == 1);
+                            }
+                        }
+                        autoClearPassWord = true;
+                        if (popupWindow.isShowing()) {
+                            popupWindow.dismiss();
+                        }
+                        ivClearPassword.setVisibility(View.GONE);
+                    }
+                    catch (Exception e) {
+                        // TODO: handle exception
+                        e.printStackTrace();
+                    }
+				}
+			});
+		}
+
+		if (info != null && !clearUsernameEditText) {
+			tvLoginName.setText(info.getAccount());
+			tvLoginName.setSelection(info.getAccount().length());
+			autoClearPassWord = true;
+			if (info.getRemember_pwd() == 1) {
+				tvPassword.setText(info.getPassword());
+			}
+			cbRemember.setChecked(info.getRemember_pwd() == 1);
+			cbAutoLogin.setChecked(info.getAutologin() == 1);
+		}
+	}
+
+    /**
+     * 获取最后登录用户
+     * 
+     * @param infos
+     * @return
+     */
+    private AccountInfo getLastestActiveAccount(List<AccountInfo> infos) {
+        long latestTime = 0l;
+        int index = 0;
+        for (AccountInfo accountInfo : infos) {
+            if (latestTime < accountInfo.getLastactivetime()) {
+                latestTime = accountInfo.getLastactivetime();
+                index = infos.indexOf(accountInfo);
+            }
+        }
+        return infos.get(index);
+        
+    }
+
+	private class MyAdapter extends BaseAdapter {
+
+		private List<String> counts;
+		LayoutInflater layoutInflater;
+
+		public MyAdapter(Context context, List<String> counts) {
+			super();
+			layoutInflater = LayoutInflater.from(context);
+			this.counts = counts;
+		}
+
+		public void setMyAdapter(List<String> counts) {
+			this.counts = counts;
+			notifyDataSetChanged();
+		}
+
+		@Override
+		public int getCount() {
+			return counts == null ? 0 : counts.size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			return null;
+		}
+
+		@Override
+		public long getItemId(int position) {
+			return position;
+		}
+
+		@Override
+		public View getView(final int position, View convertView,
+				ViewGroup parent) {
+			View view = layoutInflater
+					.inflate(R.layout.login_counts_item, null);
+			TextView count = (TextView) view
+					.findViewById(R.id.login_count_item);
+			ImageView delView = (ImageView) view
+					.findViewById(R.id.login_count_del);
+			count.setText(counts.get(position));
+			delView.setOnClickListener(new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					// 删除对话框
+					popupWindow.dismiss();
+					confirmDlg(position);
+				}
+
+			});
+			return view;
+		}
+	}
+
+	/**
+	 * 删除某个保存账户, 提示
+	 * 
+	 * @param position
+	 */
+	private void confirmDlg(final int position) {
+
+//		showDialog(getString(R.string.notice_title), String.format(
+//				getString(R.string.login_remove_account_confirm),
+//				accounts.get(position)), getString(R.string.ok),
+//				getString(R.string.cancel),
+//				new DialogInterface.OnClickListener() {
+//					@Override
+//					public void onClick(DialogInterface arg0, int arg1) {
+//						if (accounts.get(position).equals(tvLoginName.getText().toString())) {
+//							tvLoginName.setText("");
+//							tvPassword.setText("");
+//							clearUsernameEditText = true;
+//						}
+//
+//						accountService.clearPassword(accounts.get(position));
+//						accounts.remove(position);
+//						// 刷新pop list
+//						// initAccoutPoplist();
+//						adapter.setMyAdapter(accounts);
+//						adapter.notifyDataSetChanged();
+//					}
+//				}, null);
+		
+		new OaAlertDialog.Builder(LoginActivity.this)
+		.setMessage(String.format(getString(R.string.login_remove_account_confirm),accounts.get(position)))
+		.setPositiveButton(getString(R.string.ok),
+				new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						if (accounts.get(position).equals(tvLoginName.getText().toString())) {
+							tvLoginName.setText("");
+							tvPassword.setText("");
+							clearUsernameEditText = true;
+						}
+
+						accountService.clearPassword(accounts.get(position));
+						accounts.remove(position);
+						// 刷新pop list
+						// initAccoutPoplist();
+						adapter.setMyAdapter(accounts);
+						adapter.notifyDataSetChanged();
+					}
+				})
+		.setNegativeButton(LoginActivity.this.getString(R.string.cancel), null)
+		.show();
+
+		
+	}
+
+	/**
+	 * 隐藏输入焦点
+	 */
+	public void hideInput() {
+		ViewUtil.hideSoftKeyboard(LoginActivity.this, tvLoginName);
+		ViewUtil.hideSoftKeyboard(LoginActivity.this, tvPassword);
+	}
+
+	/**
+	 * 执行登陆
+	 */
+	public void doLoginTask() {
+		mAccount = tvLoginName.getText().toString();
+		mPassword = tvPassword.getText().toString();
+
+		getAppContext().getApiClient().login(mAccount, mPassword,AppContextBase.getInstance().getClientType(),PhoneTools.getVersionName(this),
+				new HttpCallBack() {
+					@Override
+					public void onStart() {
+						if (isFinishing())
+							return;
+						showProgressDialog(getString(R.string.login_loadinglogin));
+					}
+
+					@Override
+					public void onSuccess(Object t) {
+						try {
+							if (isFinishing()){
+								removeProgressDialog();
+								return;
+							}
+	
+							user = (UserInfo) t;
+							User.setUser(LoginActivity.this, user);
+							User.setAccount(LoginActivity.this, mAccount);
+							getAppContext().setUserInfo(user);
+
+							List<ModuleInfo> moduleList = new ArrayList<ModuleInfo>();
+							if(user != null && !TextUtils.isEmpty(user.getModulelist())){
+								moduleList = JSONUtils.fromJson(user.getModulelist(), new TypeToken<ArrayList<ModuleInfo>>(){}.getType());
+								ModuleModel.getInstance().saveTx(moduleList ,user.getEntid());
+							}
+							//还原全部密码
+							String password = restorePassword(mPassword);
+							initData(password);
+							
+							if (user.getResultInfo().getType() == RetType.WEBURL.value()) {// 运营鉴权,服务器版本匹配页面,公司列表
+								JSONObject urlJson = new JSONObject(user.getResultInfo().getArgs());
+								if (urlJson.has("url")) {
+									String url = urlJson.getString("url");
+									UIHelper.pushAuthenticationTipsActivity(LoginActivity.this, url, true);
+									removeProgressDialog();
+									for(String str : accounts){
+										if(str.equals(mAccount)){
+											return;
+										}
+									}
+									AccountInfo accountInfo = new AccountInfo();
+									accountInfo.setAccount(mAccount);
+									accountInfo.setPassword(mPassword);
+									accountInfo.setRemember_pwd(cbRemember.isChecked() ? 1 : 0);
+									accountInfo.setAutologin(cbAutoLogin.isChecked() ? 1 : 0);
+									allAccounts.add(accountInfo);
+									accounts.add(mAccount);
+									adapter.notifyDataSetChanged();
+								}
+								return;
+							}
+							
+							if (!user.getResultInfo().isSuccess()) {
+								removeProgressDialog();
+								showToast(user.getResultInfo().getMessage());
+								return;
+							}
+							
+							if(moduleList.size() > 0){
+								storeUser();
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
+							showToast(LoginActivity.this.getResources().getString(R.string.login_failed_login_toast));
+							removeProgressDialog();
+						}
+					}
+
+					@Override
+					public void onFailure(Throwable t) {
+						UIHelper.showToast(LoginActivity.this, t);
+						removeProgressDialog();
+						t.printStackTrace();
+					}
+				});
+	}
+
+	/**
+	 * 加载登陆其他
+	 * 
+	 * @param canLogin
+	 * @param password
+	 */
+	public void initData(String password) {
+		try {
+			if ("setting".equals(comefrom) || "service".equals(comefrom)) {
+				// 停止服务
+				this.getAppContext().cancleAllNotify();
+			}
+			
+			Calendar cal = Calendar.getInstance(Locale.CHINA);
+			cal.add(Calendar.DATE, 7);
+			long expiredtime = cal.getTimeInMillis();
+			if (!cbAutoLogin.isChecked()) {
+				expiredtime = 0;
+			}
+			accountService.saveAccount(mAccount, password,cbRemember.isChecked(), cbAutoLogin.isChecked(),expiredtime);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 还原缓存
+	 */
+    private String restorePassword(String password) {
+        try {
+            password = new String(Base64.encode(password.getBytes(), Base64.DEFAULT));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return password;
+	}
+	
+	/**
+	 * 保存登陆用户信息
+	 */
+	private void storeUser() {
+		// 记录登陆的身份信息
+		if (!StringUtil.isEmpty(extra) && enterpriseNo != 0) { // 来自推送消息
+//			for (int j = 0; j < otherenterprise.size(); j++) {
+//				EnterpriseInfo ei = otherenterprise.get(j);
+//				if (enterpriseNo == ei.getEntid()) {
+//					if (ei.getIsactive() == 1) {
+//						if (ei.getCanlogin() == 1) {
+//							User.setEnterpriseNo(this, ei.getEntid());
+//							getAppContext().setEnterpriseNo(ei.getEntid());
+//							// 登陆企业
+//							doComLoginTask();
+//						} else {
+//							// 不能登陆提示
+//							showToast(ei.getMessage());
+//							return;
+//						}
+//					} else {
+//						// CustomAlertDialog.showActiveDialog(LoginActivity.this);
+//						// 公司未激活状态提示
+//						showToast(R.string.login_org_not_active);
+//					}
+//					break;
+//				}
+//			}
+		}else {
+			// 登陆企业
+			doComLoginTask();
+		}
+	}
+
+	/**
+	 * 获取企业端用户权限
+	 */
+	public void doComLoginTask() {
+		Intent intent = new Intent();
+		intent.putExtra(UIHelper.Login.GOTO, extra);
+		intent.putExtra(UIHelper.Login.ID, id);
+		intent.putExtra(UIHelper.Login.TITLE, msgnote);
+		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+		new ComLoginTask(LoginActivity.this, intent).doTask(new HttpCallBack() {
+			@Override
+			public void onSuccess(Object t) {
+				removeProgressDialog();
+                LoginActivity.this.finish();
+			}
+
+			@Override
+			public void onStart() {
+				showProgressDialog(getString(R.string.login_loading_org));
+			}
+
+			@Override
+			public void onFailure(Throwable t) {
+				removeProgressDialog();
+				t.printStackTrace();
+			}
+		});
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode == REQUEST_INVITE || requestCode == REQUEST_VERIRY_QUESTION) {
+			if (resultCode == RESULT_OK) {
+				// 要求加入返回
+				storeUser();
+			}
+		}
+	}
+	
+	@Override
+	public void onEventMainThread(FinishActivityEvent event) {//loginActivity don't do anything
+		if(event.what == FinishActivityEvent.LOGIN_SUCCESS){
+			this.finish();
+		}
+	}
+}

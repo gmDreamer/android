@@ -1,0 +1,99 @@
+package cn.oa.android.app;
+
+import android.content.Context;
+import android.support.multidex.MultiDex;
+import cn.oa.android.api.AfinalClient;
+import cn.oa.android.app.util.NotificationHelper;
+import cn.oa.android.lib.util.AppUtil;
+import cn.oa.android.support.app.AppContextBase;
+import cn.oa.android.support.app.AppData.NotificationMode;
+import cn.oa.android.support.app.user.LoginConfig;
+import cn.oa.android.support.app.util.PhoneTools;
+
+public class MainApp extends AppContextBase {
+	public static final String TAG = MainApp.class.getSimpleName();
+	
+	private String mVersion = null;
+	/**
+	 * 获取app版本
+	 * @return
+	 */
+	public String getVersion() {
+		if (mVersion != null) {
+			return mVersion;
+		} else {
+			return "";
+		}
+	}
+	
+	public AfinalClient getApiClient(){
+		return AfinalClient.getInstance();
+	}
+	@Override
+	protected void attachBaseContext(Context base) {
+		super.attachBaseContext(base);
+		//MultiDex.install(this);
+	}
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		
+		mVersion = getVersionString();
+		// Set up storage cache.
+		// loadResourceManagers();
+		// Catch sdcard state changes
+		// new MediaCardStateBroadcastReceiver().register();
+		
+		//App启动的时候，设置好客户端类型及版本
+		LoginConfig.setClientVersion(this, mVersion);
+		LoginConfig.setClientType(this, String.format("%s%s", AppSettings.DEVICE_TYPE, AppSettings.ClientVer.currentClientVer(this).toString()));
+//		LoginConfig.setMapType(this, AppSettings.MAP_TYPE);
+		//暂时在这里设置一下
+		LoginConfig.setAllowIMService(this, AppSettings.IM_ALLOW);
+		
+		//支持浏览器调试 http 请求
+		AppUtil.setDebug(AppSettings.USE_DEBUG);
+		if(AppSettings.DEBUG){
+//		 Stetho.initialize(
+//			      Stetho.newInitializerBuilder(this)
+//			        .enableDumpapp(
+//			            Stetho.defaultDumperPluginsProvider(this))
+//			        .enableWebKitInspector(
+//			            Stetho.defaultInspectorModulesProvider(this))
+//			        .build());
+		}
+	}
+
+	/**
+	 * Constructs the version string of the application.
+	 * 
+	 * @param context
+	 *            the context to use for getting package info
+	 * @return the versions string of the application
+	 */
+	private String getVersionString() {
+		// Get a version string for the app.
+		return PhoneTools.getVersionName(this);
+	}
+
+	/**
+	 * 关闭掉所有推送消息
+	 */
+	public void cancleAllNotify() {
+		NotificationHelper.cancel(this, NotificationMode.PMS.ordinal());
+		NotificationHelper.cancel(this, NotificationMode.PUSH.ordinal());
+	}
+	/**
+	 * 显示通知
+	 * @param mode
+	 * @param total
+	 * @param title
+	 * @param showSound
+	 */
+	@Override
+	public void showNotification(NotificationMode mode, int total, String title,Boolean showSound) {
+		NotificationHelper.notify(this, mode, total, title, showSound);
+	}
+	
+	
+}

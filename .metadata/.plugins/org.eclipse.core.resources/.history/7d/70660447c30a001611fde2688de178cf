@@ -1,0 +1,7 @@
+package cn.oa.android.app.im.utils;
+
+import android.view.View;
+
+public class ImageViwMask extends View {
+
+}

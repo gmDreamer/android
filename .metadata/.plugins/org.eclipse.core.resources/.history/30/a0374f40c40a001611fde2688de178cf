@@ -1,0 +1,13 @@
+package cn.oa.android.app.im.utils;
+
+import android.content.Context;
+import android.view.View;
+
+public class ImageViwMask extends View {
+
+	public ImageViwMask(Context context) {
+		super(context);
+
+	}
+
+}

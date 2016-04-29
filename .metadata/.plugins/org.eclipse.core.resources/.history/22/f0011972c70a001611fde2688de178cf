@@ -1,0 +1,25 @@
+package cn.oa.android.app.im.utils;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Paint;
+import android.graphics.PorterDuffXfermode;
+import android.util.AttributeSet;
+import android.view.View;
+
+public class ImageViwMask extends View {
+    private Context context;
+    private Bitmap bitmap;
+    private Bitmap bitmapMask;
+    private Paint paint;
+    private PorterDuffXfermode xfermode;
+    private int width;
+    private int height;
+	public ImageViwMask(Context context) {
+		super(context);
+
+	}
+    public ImageViwMask(Context context,AttributeSet attributeSet){
+    	
+    }
+}

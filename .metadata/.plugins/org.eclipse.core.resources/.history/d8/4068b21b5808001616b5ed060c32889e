@@ -1,0 +1,150 @@
+<!-- <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="${relativePackage}.${activityClass}" >
+  <LinearLayout android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+      <EditText android:layout_width="fill_parent"
+                android:layout_height="wrap_content"/>
+  </LinearLayout>
+  <LinearLayout android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="right">
+      <Button android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="确定"/>
+      <Button android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="abc"/>
+        线性布局－1
+      </LinearLayout> 
+      
+   <LinearLayout android:layout_width="fill_parent"
+                 android:layout_height="fill_parent"
+                 android:layout_weight="1"
+                 android:orientation="horizontal"
+                 >
+       <TextView android:layout_width="wrap_content"
+                 android:layout_height="fill_parent"
+                 android:background="#aa0000"
+                 android:layout_weight="1"
+                 />
+       <TextView android:layout_width="wrap_content"
+                 android:layout_height="fill_parent"
+                 android:background="#00aa00"
+                 android:layout_weight="1"
+           />
+       <TextView android:layout_width="wrap_content"
+                 android:layout_height="fill_parent"
+                 android:background="#0000aa"
+                 android:layout_weight="1"
+                />
+   </LinearLayout> 
+   <LinearLayout android:layout_width="fill_parent"
+                 android:layout_height="fill_parent"
+                 android:layout_weight="1"
+                 android:orientation="vertical"
+       >
+       <TextView android:layout_width="fill_parent"
+                 android:layout_height="wrap_content"
+                 android:background="#aa0000"
+                 android:layout_weight="1"
+                 />
+       <TextView android:layout_width="fill_parent"
+                 android:layout_height="wrap_content"
+                 android:layout_weight="1"
+                 android:background="#00aa00"
+           />
+   </LinearLayout>  
+   线性布局和垂直布局用法  
+</LinearLayout> -->
+<!-- <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="fill_parent"
+             android:layout_height="fill_parent">
+            帧布局，都是从原点出发(0,0) 做上焦
+            <TextView android:layout_width="500dp"
+                      android:layout_height="400dp"
+                      android:background="#00cc00"
+                />
+                         <TextView android:layout_width="300dp"
+                       android:layout_height="200dp"
+                       android:background="#cc0000"
+                 />
+                   <TextView android:layout_width="100dp"
+                      android:layout_height="100dp"
+                      android:background="#0000cc"
+                />
+ </FrameLayout> -->
+<!-- <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent">  表格布局
+            <TableRow >
+                      <Button android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="确定"
+                      />
+                      <Button android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="取消"
+                      />
+                
+            </TableRow>
+                      <TableRow >
+                      <Button android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="确定"
+                      />
+                      <Button android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="取消"
+                      />
+                
+            </TableRow>
+ </TableLayout> -->
+ <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:layout_width="fill_parent"
+                 android:layout_height="wrap_content">
+               <TextView android:layout_width="fill_parent"
+                         android:layout_height="wrap_content"
+                         android:id="@+id/text"
+                         android:text="Hello is android"
+                         android:layout_marginBottom="50dp"
+                         android:background="#aa0000"
+                   /> 
+               <EditText android:layout_width="fill_parent"
+                         android:layout_height="wrap_content"
+                         android:layout_below="@id/text"
+                         android:id="@+id/edi"
+                         />
+               <Button  android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text ="取消"
+                        android:layout_below="@id/edi"
+                        android:layout_alignParentRight="true"
+                        android:id="@+id/btn"
+                    />
+               <Button android:layout_width="wrap_content"
+                       android:layout_height="wrap_content"
+                       android:layout_toLeftOf="@id/btn" 
+                       android:layout_marginRight="20dp"
+                       android:text="确定"
+                       android:layout_alignTop="@id/btn"
+                       />
+               <LinearLayout android:layout_width="fill_parent" android:layout_height="wrap_content"
+                    android:layout_below="@id/btn" android:orientation="vertical"
+                    >
+                   <TextView android:layout_width="fill_parent"
+                             android:layout_height="50dp"
+                             android:background="#aa0000"
+                       />
+                   <Button android:layout_width="wrap_content"
+                           android:layout_height="wrap_content"
+                           android:layout_gravity="right"
+                           android:text="abcf"
+                           />
+               </LinearLayout>
+ </RelativeLayout>

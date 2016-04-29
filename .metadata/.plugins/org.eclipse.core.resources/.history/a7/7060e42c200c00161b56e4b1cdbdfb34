@@ -1,0 +1,47 @@
+package com.example.a;
+
+
+import android.content.Context;  
+import android.content.res.TypedArray;  
+import android.graphics.Bitmap;  
+import android.graphics.Bitmap.Config;  
+import android.graphics.BitmapFactory;  
+import android.graphics.Canvas;  
+import android.graphics.NinePatch;
+import android.graphics.Paint;  
+import android.graphics.PorterDuff;  
+import android.graphics.PorterDuffXfermode;  
+import android.graphics.Rect;
+import android.util.AttributeSet;  
+import android.widget.ImageView;
+
+public class ImageMask extends ImageView {
+    int mImageSource = 0;
+    int mMaskSource = 0;
+	 public ImageMask(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.MaskImage, 0, 0);
+	    mImageSource = a.getResourceId(R.styleable.MaskImage_image, 0);
+	    mMaskSource  = a.getResourceId(R.styleable.MaskImage_mask, 0);
+	    if(mImageSource ==0 || mMaskSource ==0){
+	    	System.out.println("不是一个有效图片");
+	    }
+	    Bitmap  bitmap = BitmapFactory.decodeResource(getResources(), mImageSource);
+	    Bitmap  maskmap = BitmapFactory.decodeResource(getResources(), mMaskSource);
+	    Bitmap  result  = Bitmap.createBitmap(bitmap.getWidth(),bitmap.getHeight(),Config.ARGB_8888);
+	    Canvas  canvas = new Canvas();
+	    NinePatch path = new NinePatch(maskmap, maskmap.getNinePatchChunk(), null);
+	    path.draw(canvas, new Rect(0, 0, 200, 200));
+	    Paint   paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+	    paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+	    canvas.drawBitmap(bitmap, 0, 0, null);
+	    canvas.drawBitmap(maskmap, 0, 0,paint);
+	    paint.setXfermode(null);
+	    setImageBitmap(maskmap); 
+	    setScaleType(ScaleType.CENTER);   
+        a.recycle();
+	    
+	}
+
+	
+}
